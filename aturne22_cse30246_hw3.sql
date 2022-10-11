@@ -15,9 +15,13 @@ cfb_drive ON cfb_drive.team_id = team.team_id WHERE cfb_drive.red_zone_attempt =
 GROUP BY team.name HAVING COUNT(*) > 10) AS overall on success.name = overall.name ORDER BY (success.count / overall.count) desc, success.name LIMIT 5;
 
 /* 4. 10pts Which conference has the shortest games and how long are they on average? */
-SELECT cfb_conference.name, AVG(duration) as duration FROM
-cfb_conference, cfb_team, cfb_game, cfb_game_stats WHERE cfb_game_stats.game_id = cfb_game.game_id AND cfb_game.home_team_id = cfb_team.team_id AND cfb_team.conference_id = cfb_conference.conference_id
-GROUP BY cfb_conference.conference_id ORDER BY AVG(duration) LIMIT 1;
+SELECT cfb_conference.name, duration FROM cfb_conference,
+(SELECT conference_id, AVG(duration) as duration FROM
+((SELECT cfb_conference.conference_id, cfb_game.game_id, duration FROM cfb_conference, cfb_team, cfb_game, cfb_game_stats
+WHERE cfb_game_stats.game_id = cfb_game.game_id AND cfb_game.home_team_id = cfb_team.team_id AND cfb_team.conference_id = cfb_conference.conference_id AND cfb_team.year = YEAR(cfb_game.game_date)) UNION
+(SELECT cfb_conference.conference_id, cfb_game.game_id, duration FROM cfb_conference, cfb_team, cfb_game, cfb_game_stats
+WHERE cfb_game_stats.game_id = cfb_game.game_id AND cfb_game.visit_team_id = cfb_team.team_id AND cfb_team.conference_id = cfb_conference.conference_id AND cfb_team.year = YEAR(cfb_game.game_date))) as union_teams 
+GROUP BY conference_id) as conf_duration WHERE conf_duration.conference_id = cfb_conference.conference_id ORDER BY duration LIMIT 1;
 
 /* 5. 10pts Which player had the most yards on 1st down in October. */
 SELECT cfb_player.first_name, cfb_player.last_name FROM cfb_player,
